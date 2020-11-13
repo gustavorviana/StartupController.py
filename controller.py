@@ -184,7 +184,7 @@ class StartupController:
 
     @property
     def apps_dir(self):
-        return maindir('apps')
+        return make_configdir('apps')
 
     def __iter__(self):
         return self.__apps.values().__iter__()
@@ -244,6 +244,7 @@ class StartupController:
             print(f"Falha ao criar arquivo de configuração. {str(ex)}")
             return False
 
+    # noinspection PyBroadException
     @staticmethod
     def write_log(text: str, *tags, **kwargs):
         prefixes = ['STARTUP CONTROLLER']
@@ -253,7 +254,8 @@ class StartupController:
         text = load_tag(text, args=tags, prefixes=prefixes)
 
         try:
-            with open(maindir('log'), "a+") as log:
+            logfile = f'{make_configdir()}log.txt'
+            with open(logfile, "a+") as log:
                 now = datetime.now().strftime("%d/%m/%y %H:%M:%S")
                 log.write(f"[{now}] {text}\n")
         except Exception:
@@ -262,9 +264,13 @@ class StartupController:
         print(text)
 
 
-def maindir(*paths):
-    rootdir = os.path.dirname(__file__)
-    fullpath = os.path.join(rootdir, *paths)
+def make_configdir(*paths):
+    config_dir = f'{get_config_dir()}{os.sep}startupctl'
+    fullpath = os.path.join(config_dir, *paths)
+
+    if not os.path.exists(fullpath):
+        os.makedirs(fullpath)
+
     return f'{fullpath}{os.path.sep}'
 
 
@@ -300,3 +306,14 @@ def parse_time(timestr: str):
     second = int(splited[2]) if timelen == 3 else 0
 
     return time(hour, minute, second)
+
+
+def get_config_dir():
+    from pathlib import Path
+    home = str(Path.home())
+
+    from sys import platform
+    if platform == "win32":
+        return os.getenv('APPDATA')
+
+    return f'{home}/.config'
